@@ -1,52 +1,48 @@
-# app/main.py
-
 import streamlit as st
-from app.retriever import retrieve_relevant_chunks
+import faiss # Import faiss here
+from app.retriever import retrieve_relevant_chunks, load_faiss_index_and_chunks # Import load_faiss_index_and_chunks
 from app.responder import generate_response
 from app.image_gen import generate_image_prompt, generate_image
-from app.config import DEFAULT_EMBEDDING_MODEL, DEFAULT_TEXT_GENERATION_MODEL, DEFAULT_IMAGE_GENERATION_MODEL
+from app.config import DEFAULT_EMBEDDING_MODEL, DEFAULT_TEXT_GENERATION_MODEL, DEFAULT_IMAGE_GENERATION_MODEL, FAISS_INDEX_PATH, TEXT_CHUNKS_PATH # Import paths
 
 def process_query(
     query: str,
-    faiss_index, # Pass the FAISS index object
-    all_chunks,  # Pass the list of all chunks
+    faiss_index_path: str, 
+    all_chunks,  
     selected_tone: str,
     embedding_model_name: str = DEFAULT_EMBEDDING_MODEL,
     text_gen_model_name: str = DEFAULT_TEXT_GENERATION_MODEL,
     image_gen_model_name: str = DEFAULT_IMAGE_GENERATION_MODEL
 ) -> dict:
-    """
-    Orchestrates the query processing, response generation, and image creation.
-    Generates an image only if the response is relevant to the knowledge base.
-    No image is generated or displayed for irrelevant queries.
+    
+    # Load FAISS index and chunks on each query to ensure fresh state
+    current_faiss_index = None
+    current_all_chunks = []
 
-    Args:
-        query (str): The user's input query.
-        faiss_index: The loaded FAISS index.
-        all_chunks: The list of all text chunks.
-        selected_tone (str): The tone selected by the user.
-        embedding_model_name (str): Name of the embedding model.
-        text_gen_model_name (str): Name of the text generation model.
-        image_gen_model_name (str): Name of the image generation model.
-
-    Returns:
-        dict: A dictionary containing the generated story response and image URL (or None if no image).
-    """
-    # No default placeholder needed if we return None
-    # NO_IMAGE_PLACEHOLDER = "https://placehold.co/512x512/808080/FFFFFF?text=No+Image+Available"
-
-    if not faiss_index or not all_chunks:
+    if faiss_index_path and all_chunks: # Check if path and chunks are available in session state
+        try:
+            current_faiss_index = faiss.read_index(faiss_index_path)
+            current_all_chunks = all_chunks # Chunks are already in session state
+            print("FAISS index successfully loaded from disk for current query.")
+        except Exception as e:
+            st.error(f"Error loading FAISS index from disk: {e}. Please try rebuilding the knowledge base.")
+            print(f"Error loading FAISS index from disk: {e}")
+            return {
+                "story_response": "Oops! My memory seems to have a glitch. I couldn't load my story index. Please try rebuilding the knowledge base!",
+                "image_url": None
+            }
+    else:
         return {
             "story_response": "My storybooks are currently empty! Please ensure the PDF files are in 'data/stories/' or uploaded, and try rebuilding the knowledge base.",
-            "image_url": None # Return None for image_url if no knowledge base
+            "image_url": None
         }
 
     # 1. Retrieve relevant chunks
     with st.spinner("Searching through my storybooks..."):
         relevant_chunks = retrieve_relevant_chunks(
             query,
-            faiss_index,
-            all_chunks,
+            current_faiss_index, # Use the freshly loaded index
+            current_all_chunks,  # Use the chunks from session state
             embedding_model_name
         )
         if not relevant_chunks:

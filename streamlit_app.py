@@ -2,7 +2,8 @@ import streamlit as st
 import os
 # from dotenv import load_dotenv
 # load_dotenv()
-from app.retriever import create_and_store_embeddings, load_faiss_index_and_chunks
+
+from app.retriever import create_and_store_embeddings, load_faiss_index_and_chunks 
 from app.main import process_query
 from app.config import (
     OPENAI_API_KEY,
@@ -15,7 +16,7 @@ from app.config import (
     DEFAULT_TEXT_GENERATION_MODEL,
     DEFAULT_IMAGE_GENERATION_MODEL,
     DATA_DIR,
-    FAISS_INDEX_PATH,
+    FAISS_INDEX_PATH, # We will use this path in session state
     TEXT_CHUNKS_PATH
 )
 
@@ -28,23 +29,25 @@ st.set_page_config(
 )
 
 st.title("📚 Whimsical Storyteller AI")
-st.markdown("Ask me anything about Alice in Wonderland, Gulliver's Travels, or The Arabian Nights or upploaded ones, and I'll reply with a story in desried tone and an image!")
+st.markdown("Ask me anything about Alice in Wonderland, Gulliver's Travels, or The Arabian Nights, and I'll reply with a funny story and an image!")
 
 # --- API Key Check ---
 if not OPENAI_API_KEY:
-    st.error("OpenAI API Key not found. Please create a `.env` file in the root directory with `OPENAI_API_KEY='your_key_here'`.")
+    st.error("OpenAI API Key not found. For local development, ensure `OPENAI_API_KEY` is set in your `.env` file. For Streamlit Cloud, add it to `st.secrets`.")
     st.stop()
 
 # --- Initialize Session State ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
-if "faiss_index" not in st.session_state:
-    st.session_state.faiss_index = None
+# Store the path to the FAISS index, not the object itself
+if "faiss_index_path" not in st.session_state:
+    st.session_state.faiss_index_path = None
 if "all_chunks" not in st.session_state:
     st.session_state.all_chunks = []
 if "embeddings_built" not in st.session_state:
     st.session_state.embeddings_built = False
 
+# --- Sidebar for Configuration ---
 st.sidebar.header("⚙️ Settings")
 
 # Output Tone Control
@@ -96,7 +99,7 @@ selected_image_gen_model_display = st.sidebar.selectbox(
 selected_image_gen_model = IMAGE_GENERATION_MODELS[selected_image_gen_model_display]
 st.session_state.selected_image_gen_model = selected_image_gen_model
 
-# Knowledge Base Management 
+# --- Knowledge Base Management ---
 st.sidebar.subheader("Knowledge Base")
 
 # PDF Uploader
@@ -109,43 +112,39 @@ uploaded_files = st.sidebar.file_uploader(
 
 # Button to rebuild embeddings
 if st.sidebar.button("Rebuild Story Knowledge Base"):
-    if uploaded_files:
-        with st.spinner("Building knowledge base from uploaded files... This might take a moment!"):
-            faiss_index, all_chunks = create_and_store_embeddings(
-                st.session_state.selected_embedding_model,
-                uploaded_files=uploaded_files # Pass uploaded files
-            )
-            st.session_state.faiss_index = faiss_index
-            st.session_state.all_chunks = all_chunks
-            st.session_state.embeddings_built = True
-            if faiss_index and all_chunks:
-                st.sidebar.success(f"Knowledge Base Built Successfully from {len(uploaded_files)} uploaded PDFs!")
-            else:
-                st.sidebar.error("Failed to build Knowledge Base from uploaded files. Check console for errors.")
-    else:
-        # If no files uploaded, try to use files from data/stories/
-        with st.spinner("No files uploaded. Attempting to build knowledge base from 'data/stories/'..."):
-            faiss_index, all_chunks = create_and_store_embeddings(
-                st.session_state.selected_embedding_model
-            )
-            st.session_state.faiss_index = faiss_index
-            st.session_state.all_chunks = all_chunks
-            st.session_state.embeddings_built = True
-            if faiss_index and all_chunks:
-                st.sidebar.success("Knowledge Base Built Successfully from 'data/stories/'!")
-            else:
-                st.sidebar.error("Failed to build Knowledge Base. Please upload PDFs or ensure files are in 'data/stories/'.")
+    # Clear existing index path and chunks in session state before rebuilding
+    st.session_state.faiss_index_path = None
+    st.session_state.all_chunks = []
+    st.session_state.embeddings_built = False
 
+    with st.spinner("Building knowledge base... This might take a moment!"):
+        # create_and_store_embeddings will save the index and chunks to disk
+        faiss_index_obj, all_chunks_list = create_and_store_embeddings(
+            st.session_state.selected_embedding_model,
+            uploaded_files=uploaded_files # Pass uploaded files
+        )
+        
+        if faiss_index_obj is not None and all_chunks_list:
+            st.session_state.faiss_index_path = FAISS_INDEX_PATH # Store the path
+            st.session_state.all_chunks = all_chunks_list
+            st.session_state.embeddings_built = True
+            st.sidebar.success("Knowledge Base Built Successfully!")
+        else:
+            st.sidebar.error("Failed to build Knowledge Base. Check console for errors. Ensure PDFs are valid.")
 
 # Load existing embeddings on app start if not already loaded
+# We only check if the files exist, the actual loading happens in process_query
 if not st.session_state.embeddings_built:
     if os.path.exists(FAISS_INDEX_PATH) and os.path.exists(TEXT_CHUNKS_PATH):
-        st.session_state.faiss_index, st.session_state.all_chunks = load_faiss_index_and_chunks()
-        if st.session_state.faiss_index and st.session_state.all_chunks:
+        # We don't load the FAISS object here, just confirm files exist and store path
+        st.session_state.faiss_index_path = FAISS_INDEX_PATH
+        st.session_state.all_chunks = load_chunks(TEXT_CHUNKS_PATH) # Load chunks once
+        if st.session_state.all_chunks: # Check if chunks were successfully loaded
             st.session_state.embeddings_built = True
-            st.sidebar.success("Loaded existing Knowledge Base.")
+            st.sidebar.success("Loaded existing Knowledge Base (from disk).")
         else:
-            st.sidebar.warning("Could not load existing Knowledge Base. Please rebuild it using uploaded PDFs or files in 'data/stories/'.")
+            st.session_state.faiss_index_path = None # Reset if chunks failed to load
+            st.sidebar.warning("Could not load existing Knowledge Base chunks. Please rebuild it.")
     else:
         st.sidebar.info("No existing Knowledge Base found. Upload PDFs or place them in 'data/stories/' and click 'Rebuild Story Knowledge Base' to get started.")
 
@@ -157,6 +156,7 @@ for message in st.session_state.messages:
     elif message["role"] == "assistant":
         with st.chat_message("assistant"):
             st.write(message["content"])
+            # Only display image if image_url is not None
             if message.get("image_url"):
                 st.image(message["image_url"], caption="Generated Image", use_column_width=True)
 
@@ -169,7 +169,7 @@ if query := st.chat_input("Ask me about Alice, Gulliver, or Arabian Nights..."):
     # Process the query using the main orchestration logic
     response_data = process_query(
         query,
-        st.session_state.faiss_index,
+        st.session_state.faiss_index_path, # Pass the path instead of the object
         st.session_state.all_chunks,
         st.session_state.selected_tone,
         st.session_state.selected_embedding_model,
@@ -183,6 +183,7 @@ if query := st.chat_input("Ask me about Alice, Gulliver, or Arabian Nights..."):
     # Add assistant response to chat history
     with st.chat_message("assistant"):
         st.write(story_response)
+        # Only add image to history and display if image_url is not None
         if image_url:
             st.image(image_url, caption="Generated Image", use_column_width=True)
             st.session_state.messages.append({"role": "assistant", "content": story_response, "image_url": image_url})
@@ -193,3 +194,4 @@ if query := st.chat_input("Ask me about Alice, Gulliver, or Arabian Nights..."):
 if st.sidebar.button("Clear Chat"):
     st.session_state.messages = []
     st.rerun()
+
