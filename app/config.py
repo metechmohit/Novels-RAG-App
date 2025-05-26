@@ -1,6 +1,7 @@
 import os
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+import streamlit as st
+# OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 
 # Default Model Configurations 
 DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"

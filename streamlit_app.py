@@ -1,7 +1,7 @@
 import streamlit as st
 import os
-from dotenv import load_dotenv
-load_dotenv()
+# from dotenv import load_dotenv
+# load_dotenv()
 from app.retriever import create_and_store_embeddings, load_faiss_index_and_chunks
 from app.main import process_query
 from app.config import (
@@ -28,7 +28,7 @@ st.set_page_config(
 )
 
 st.title("📚 Whimsical Storyteller AI")
-st.markdown("Ask me anything about Alice in Wonderland, Gulliver's Travels, or The Arabian Nights, and I'll reply with a funny story and an image!")
+st.markdown("Ask me anything about Alice in Wonderland, Gulliver's Travels, or The Arabian Nights or upploaded ones, and I'll reply with a story in desried tone and an image!")
 
 # --- API Key Check ---
 if not OPENAI_API_KEY:
@@ -45,7 +45,6 @@ if "all_chunks" not in st.session_state:
 if "embeddings_built" not in st.session_state:
     st.session_state.embeddings_built = False
 
-# --- Sidebar for Configuration ---
 st.sidebar.header("⚙️ Settings")
 
 # Output Tone Control
@@ -97,7 +96,7 @@ selected_image_gen_model_display = st.sidebar.selectbox(
 selected_image_gen_model = IMAGE_GENERATION_MODELS[selected_image_gen_model_display]
 st.session_state.selected_image_gen_model = selected_image_gen_model
 
-# --- Knowledge Base Management ---
+# Knowledge Base Management 
 st.sidebar.subheader("Knowledge Base")
 
 # PDF Uploader
