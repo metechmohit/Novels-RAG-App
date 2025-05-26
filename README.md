@@ -66,17 +66,17 @@ This section details how the project's design and implementation meet the specif
 
 1.  **Clone the repository (or create the files manually):**
     ```bash
-    git clone <your-repo-url>
-    cd <your-repo-name>
+    git clone https://github.com/metechmohit/Novels-RAG-App
+    cd Novels-RAG-App
     ```
 
 2.  **Create a Python Virtual Environment (recommended):**
     ```bash
-    python -m venv venv
+    python -m venv myenv
     # On Windows:
-    .\venv\Scripts\activate
+    .\myenv\Scripts\activate
     # On macOS/Linux:
-    source venv/bin/activate
+    source myenv/bin/activate
     ```
 
 3.  **Install Dependencies:**
@@ -101,9 +101,9 @@ This section details how the project's design and implementation meet the specif
 1.  **Activate your virtual environment (if you haven't already):**
     ```bash
     # On Windows:
-    .\venv\Scripts\activate
+    .\myenv\Scripts\activate
     # On macOS/Linux:
-    source venv/bin/activate
+    source myenv/bin/activate
     ```
 
 2.  **Run the Streamlit application:**
