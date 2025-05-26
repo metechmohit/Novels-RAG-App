@@ -3,7 +3,8 @@ import os
 # from dotenv import load_dotenv
 # load_dotenv()
 
-from app.retriever import create_and_store_embeddings, load_faiss_index_and_chunks 
+from app.retriever import create_and_store_embeddings
+from app.utils import load_chunks
 from app.main import process_query
 from app.config import (
     OPENAI_API_KEY,
@@ -29,7 +30,7 @@ st.set_page_config(
 )
 
 st.title("📚 Whimsical Storyteller AI")
-st.markdown("Ask me anything about Alice in Wonderland, Gulliver's Travels, or The Arabian Nights, and I'll reply with a funny story and an image!")
+st.markdown("Ask me anything about Alice in Wonderland, Gulliver's Travels, or The Arabian Nights or uploaded ones, and I'll reply with a story in desried tone with an image!")
 
 # --- API Key Check ---
 if not OPENAI_API_KEY:
@@ -139,7 +140,7 @@ if not st.session_state.embeddings_built:
         # We don't load the FAISS object here, just confirm files exist and store path
         st.session_state.faiss_index_path = FAISS_INDEX_PATH
         st.session_state.all_chunks = load_chunks(TEXT_CHUNKS_PATH) # Load chunks once
-        if st.session_state.all_chunks: # Check if chunks were successfully loaded
+        if st.session_state.all_chunks: 
             st.session_state.embeddings_built = True
             st.sidebar.success("Loaded existing Knowledge Base (from disk).")
         else:
