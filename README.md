@@ -130,3 +130,8 @@ This section details how the project's design and implementation meet the specif
 
 4.  **Clear Chat:**
     * Use the "Clear Chat" button in the sidebar to reset the conversation.
+
+## Demo Video
+
+https://github.com/user-attachments/assets/3d4b9b28-aa3b-4733-8a3d-1dd45879026c
+
