@@ -1,6 +1,6 @@
 # Whimsical Storyteller AI
 
-This project implements a Retrieval Augmented Generation (RAG) based chatbot designed to answer user queries about classic public domain fictional stories: "Alice in Wonderland", "Gulliver's Travels", and "The Arabian Nights". The chatbot provides responses in a funny tone, generates related images, and gracefully handles irrelevant queries.
+This project implements a Retrieval Augmented Generation (RAG) based chatbot designed to answer user queries about classic public domain fictional stories: "Alice in Wonderland", "Gulliver's Travels", and "The Arabian Nights" or uploaded on page. The chatbot provides responses in a selected tone (funny, narrator,etc), generates related images, and gracefully handles irrelevant queries.
 
 ## Assignment Requirements Addressed
 
@@ -38,7 +38,7 @@ This section details how the project's design and implementation meet the specif
     * **Implementation:** Centralized in `app/config.py` and abstracted in `app/utils.py`.
     * **Flexibility:** All model names (for embeddings, text generation, and image generation) are defined in `app/config.py`. The `app/utils.py` module provides generic `get_embedding_model`, `get_llm_model`, and `get_image_model` functions that return the appropriate OpenAI client based on the selected model name.
     * **User Interface:** Streamlit's sidebar provides dropdowns, allowing users to switch between different OpenAI models at runtime without code changes.
-    * **Future-Proofing:** The modular design facilitates integrating local open-source models (e.g., Sentence Transformers for embeddings, Llama-2/Mistral for text generation) by modifying only `app/config.py` and `app/utils.py` to include their respective client initializations.
+    * **Future-Proofing:** The modular design facilitates integrating local open-source models (e.g., Sentence Transformers for embeddings, Llama-2/Mistral for text generation) by modifying only `app/config.py` and `app/utils.py` to include their respective client initializations, this time local system wasn't supporting these models.
 
 6.  **Accuracy:**
     * **RAG's Core Benefit:** The RAG architecture fundamentally enhances accuracy by grounding the LLM's responses in the specific content retrieved from the story PDFs. This significantly reduces the likelihood of hallucinations (fabricated information).
